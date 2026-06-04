@@ -1,3 +1,4 @@
+#include <linux/ioctl.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/fs.h>
@@ -8,6 +9,9 @@
 #define DEVICE_NAME "mychardev"
 #define CLASS_NAME  "mycharclass"
 #define BUFFER_SIZE 1024
+#define MYCHAR_IOC_MAGIC 'k'
+#define MYCHAR_IOC_CLEAR _IO(MYCHAR_IOC_MAGIC, 1)
+#define MYCHAR_IOC_GET_LEN _IOR(MYCHAR_IOC_MAGIC, 2, int)
 
 static dev_t dev_number;
 static struct cdev my_cdev;
@@ -79,12 +83,40 @@ static ssize_t my_write(struct file *file, const char __user *user_buf,
     return bytes_to_write;
 }
 
+static long my_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+    int len;
+
+    switch (cmd) {
+    case MYCHAR_IOC_CLEAR:
+        memset(kernel_buffer, 0, BUFFER_SIZE);
+        data_len = 0;
+        pr_info("mychardev: buffer cleared by ioctl\n");
+        return 0;
+
+    case MYCHAR_IOC_GET_LEN:
+        len = data_len;
+
+        if (copy_to_user((int __user *)arg, &len, sizeof(len))) {
+            pr_err("mychardev: failed to copy length to user\n");
+            return -EFAULT;
+        }
+
+        pr_info("mychardev: buffer length sent to user\n");
+        return 0;
+
+    default:
+        pr_err("mychardev: invalid ioctl command\n");
+        return -EINVAL;
+    }
+}
 static struct file_operations fops = {
     .owner = THIS_MODULE,
     .open = my_open,
     .release = my_release,
     .read = my_read,
     .write = my_write,
+    .unlocked_ioctl = my_ioctl,
 };
 
 static int __init mychardev_init(void)
