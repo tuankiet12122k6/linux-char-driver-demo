@@ -1,4 +1,4 @@
-obj-m += hello_module.o
+obj-m += mychardev.o
 
 KDIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
