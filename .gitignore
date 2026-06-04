@@ -6,3 +6,5 @@
 modules.order
 Modules.symvers
 .tmp_version/
+user/test_read_write
+user/test_ioctl
